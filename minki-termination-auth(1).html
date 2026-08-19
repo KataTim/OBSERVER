@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>身份验证 · 实验终止执行终端 | KATA TIM</title>
+<style>
+  :root{
+    --bg:#07090a;
+    --panel:#121613;
+    --panel-2:#171c18;
+    --ink:#d9d6c9;
+    --ink-dim:#a9a698;
+    --muted:#7c8a80;
+    --accent-red:#a5352b;
+    --accent-red-glow:rgba(165,53,43,0.35);
+    --accent-amber:#b9932f;
+    --accent-success:#6f9b7f;
+    --line:#2a322d;
+    --serif:"Noto Serif TC","Songti TC","PMingLiU","Times New Roman",serif;
+    --sans:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+    --mono:"Noto Sans Mono","Courier New",monospace;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    *{animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition:none !important;}
+  }
+
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--serif);
+    line-height:1.85;
+    margin:0;
+    padding:0;
+    min-height:100vh;
+    position:relative;
+    overflow-x:hidden;
+  }
+
+  .watermark{
+    position:fixed;
+    inset:-20% -20%;
+    z-index:0;
+    pointer-events:none;
+    opacity:0.03;
+    font-family:var(--mono);
+    font-size:13px;
+    line-height:2.4;
+    color:var(--ink);
+    transform:rotate(-18deg);
+    white-space:pre-wrap;
+    word-break:break-all;
+    user-select:none;
+  }
+
+  .scanlines{
+    position:fixed;
+    inset:0;
+    z-index:2;
+    pointer-events:none;
+    background:repeating-linear-gradient(
+      to bottom,
+      rgba(0,0,0,0) 0px,
+      rgba(0,0,0,0) 2px,
+      rgba(0,0,0,0.12) 3px
+    );
+    mix-blend-mode:multiply;
+    opacity:0.5;
+  }
+
+  .vignette{
+    position:fixed;
+    inset:0;
+    z-index:1;
+    pointer-events:none;
+    background:radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(0,0,0,0.55) 100%);
+  }
+
+  .stamp{
+    position:fixed;
+    top:16px;
+    right:-48px;
+    z-index:5;
+    background:rgba(165,53,43,0.14);
+    border:1px solid var(--accent-red);
+    color:var(--accent-red);
+    font-family:var(--mono);
+    font-size:10.5px;
+    letter-spacing:2px;
+    padding:6px 54px;
+    transform:rotate(35deg);
+    pointer-events:none;
+    user-select:none;
+    animation:stampFlicker 6s ease-in-out infinite;
+  }
+  @keyframes stampFlicker{
+    0%,92%,100%{opacity:1;}
+    93%{opacity:0.4;}
+    94%{opacity:1;}
+    95%{opacity:0.3;}
+    96%{opacity:1;}
+  }
+
+  main{position:relative; z-index:3;}
+
+  .wrap{
+    max-width:620px;
+    margin:0 auto;
+    padding:56px 20px 100px;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+  }
+
+  /* ---------- boot sequence ---------- */
+  #bootScreen{
+    font-family:var(--mono);
+    font-size:12.5px;
+    color:var(--muted);
+    min-height:220px;
+  }
+  #bootScreen .line{
+    margin-bottom:7px;
+    white-space:pre-wrap;
+    opacity:0;
+    animation:bootIn 0.3s ease forwards;
+  }
+  @keyframes bootIn{ to{opacity:1;} }
+  #bootScreen .cursor{
+    display:inline-block;
+    width:7px; height:13px;
+    background:var(--accent-amber);
+    margin-left:2px;
+    vertical-align:-2px;
+    animation:blink 1s steps(1) infinite;
+  }
+  @keyframes blink{ 50%{opacity:0;} }
+
+  .hidden{ display:none !important; }
+  .fade-in{ animation:fadeIn 0.6s ease both; }
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+
+  /* ---------- card shell ---------- */
+  .card{
+    border:1px solid var(--line);
+    background:var(--panel);
+    padding:0;
+  }
+  .card-meta{
+    font-family:var(--mono);
+    font-size:11.5px;
+    color:var(--muted);
+    padding:16px 22px;
+    border-bottom:1px solid var(--line);
+    background:rgba(0,0,0,0.15);
+  }
+  .card-meta .row{display:flex; justify-content:space-between; gap:12px; padding:3px 0;}
+  .card-meta .v{color:var(--ink-dim); text-align:right;}
+
+  .card-body{ padding:30px 26px 32px; }
+
+  h1.title{
+    font-size:21px;
+    letter-spacing:0.5px;
+    line-height:1.55;
+    margin:0 0 6px;
+    color:var(--ink);
+  }
+  .subtitle{
+    color:var(--muted);
+    font-family:var(--mono);
+    font-size:11.5px;
+    letter-spacing:1.5px;
+    margin-bottom:26px;
+    text-transform:uppercase;
+  }
+
+  /* ---------- record panel ---------- */
+  .record-panel{
+    border:1px solid var(--line);
+    background:var(--panel-2);
+    padding:18px 20px;
+    margin-bottom:26px;
+  }
+  .record-row{
+    display:flex;
+    justify-content:space-between;
+    gap:14px;
+    font-size:14px;
+    padding:7px 0;
+    border-bottom:1px dashed var(--line);
+  }
+  .record-row:last-of-type{border-bottom:none;}
+  .record-row .k{color:var(--muted); font-family:var(--mono); font-size:11.5px; letter-spacing:1px; padding-top:2px;}
+  .record-row .v{color:var(--ink); text-align:right; font-family:var(--sans);}
+  .record-row .v.tag{
+    font-family:var(--mono); font-size:11px; letter-spacing:1px;
+    color:var(--accent-amber); border:1px solid var(--accent-amber);
+    padding:2px 8px; border-radius:2px;
+  }
+
+  .redact{
+    background:#1c1310; color:#1c1310;
+    padding:1px 5px; border-radius:2px;
+    letter-spacing:1px;
+    transition:color 0.4s ease, background 0.4s ease;
+  }
+  .redact.unlocked{
+    background:transparent; color:var(--ink);
+  }
+
+  /* ---------- waveform ---------- */
+  .wave-block{ margin-top:16px; }
+  .wave-label{
+    display:flex; justify-content:space-between;
+    font-family:var(--mono); font-size:10.5px; color:var(--muted);
+    letter-spacing:1px; margin-bottom:4px;
+  }
+  svg.wave{ width:100%; height:36px; display:block; }
+  .wave-a path.active{ stroke:var(--accent-amber); }
+  .wave-b path.active{ stroke:var(--accent-success); }
+  .wave path{
+    fill:none; stroke-width:1.6;
+    opacity:1; transition:opacity 0.6s ease;
+  }
+  .wave path.flat{ stroke:var(--accent-red); opacity:0; }
+  .wave.flatten path.active{ opacity:0; }
+  .wave.flatten path.flat{ opacity:1; }
+  .wave path.active{
+    animation:wavePulse 2.6s linear infinite;
+  }
+  @keyframes wavePulse{
+    0%{ stroke-dashoffset:0; }
+    100%{ stroke-dashoffset:-120; }
+  }
+  .wave-b path.active{ animation-duration:2.1s; }
+  .wave-b.warn path.active{ stroke:var(--accent-red); animation-duration:0.6s; }
+
+  /* ---------- form ---------- */
+  form{ margin-top:4px; }
+  .field{ margin-bottom:16px; }
+  .field label{
+    display:block;
+    font-family:var(--mono); font-size:11.5px;
+    color:var(--muted); letter-spacing:1px;
+    margin-bottom:6px;
+  }
+  .field input[type="text"]{
+    width:100%;
+    background:#0a0c0b;
+    border:1px solid var(--line);
+    color:var(--ink);
+    padding:11px 12px;
+    font-family:var(--mono);
+    font-size:14.5px;
+  }
+  .field input[type="text"]:focus{
+    outline:2px solid var(--accent-amber);
+    outline-offset:1px;
+  }
+  .field-hint{
+    font-family:var(--sans);
+    font-size:12px;
+    color:var(--muted);
+    margin-top:5px;
+  }
+
+  .confirm-row{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    font-family:var(--sans);
+    font-size:13px;
+    color:var(--ink-dim);
+    margin:20px 0 22px;
+    cursor:pointer;
+  }
+  .confirm-row input{ margin-top:3px; accent-color:var(--accent-red); flex-shrink:0; }
+
+  button.execute{
+    width:100%;
+    background:transparent;
+    border:1px solid var(--accent-red);
+    color:var(--accent-red);
+    padding:13px 20px;
+    font-family:var(--mono);
+    font-size:13.5px;
+    letter-spacing:3px;
+    cursor:pointer;
+    transition:background 0.2s ease, color 0.2s ease;
+  }
+  button.execute:hover{ background:rgba(165,53,43,0.12); }
+  button.execute:focus-visible{ outline:2px solid var(--ink); }
+  button.execute:disabled{ opacity:0.4; cursor:progress; }
+
+  #verifyMsg{
+    font-family:var(--mono); font-size:12.5px;
+    min-height:18px; margin-top:12px;
+  }
+
+  /* ---------- termination sequence overlay ---------- */
+  #execLog{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--muted);
+    margin-top:16px;
+  }
+  #execLog .line{ opacity:0; animation:bootIn 0.25s ease forwards; margin-bottom:5px; }
+
+  /* ---------- success card ---------- */
+  .success-stamp{
+    display:inline-block;
+    border:1px solid var(--accent-success);
+    color:var(--accent-success);
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:3px;
+    padding:6px 14px;
+    margin-bottom:18px;
+  }
+  .success-body p{ margin:0 0 16px; font-size:15.5px; color:var(--ink); }
+  .warn-callout{
+    border-left:3px solid var(--accent-red);
+    background:rgba(165,53,43,0.08);
+    padding:12px 16px;
+    font-size:13.5px;
+    color:var(--ink-dim);
+    margin:22px 0;
+  }
+  .warn-callout .who{
+    display:block; margin-top:8px;
+    font-family:var(--mono); font-size:11px; color:var(--muted);
+  }
+  .note-line{
+    font-family:var(--sans);
+    font-size:13px;
+    color:var(--muted);
+    border-top:1px dashed var(--line);
+    padding-top:16px;
+    margin-top:26px;
+  }
+
+  a.back-btn{
+    display:inline-block;
+    margin-top:28px;
+    background:transparent;
+    border:1px solid var(--muted);
+    color:var(--ink-dim);
+    padding:11px 22px;
+    font-family:var(--mono);
+    font-size:12.5px;
+    letter-spacing:2px;
+    text-decoration:none;
+    transition:border-color 0.2s ease, color 0.2s ease;
+  }
+  a.back-btn:hover{ border-color:var(--ink); color:var(--ink); }
+  a.back-btn:focus-visible{ outline:2px solid var(--ink); }
+
+  footer{
+    max-width:620px;
+    margin:0 auto;
+    padding:0 20px 60px;
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--muted);
+    text-align:center;
+    position:relative;
+    z-index:3;
+  }
+
+  @media (max-width:480px){
+    .wrap{ padding:40px 16px 80px; }
+    .card-body{ padding:24px 18px 26px; }
+    h1.title{ font-size:18.5px; }
+    .record-row{ flex-direction:column; gap:2px; }
+    .record-row .v{ text-align:left; }
+  }
+</style>
+</head>
+<body>
+
+<div class="watermark" id="wm"></div>
+<div class="vignette"></div>
+<div class="scanlines"></div>
+<div class="stamp">绝密 · EYES ONLY</div>
+
+<main>
+  <div class="wrap">
+
+    <!-- ============ 开机序列 ============ -->
+    <div id="bootScreen"></div>
+
+    <!-- ============ 身份验证卡片 ============ -->
+    <section id="verifyCard" class="card hidden">
+      <div class="card-meta">
+        <div class="row"><span>终端类别</span><span class="v">内部限阅 · 执行终端</span></div>
+        <div class="row"><span>关联档案</span><span class="v">/archive/soulsys/termination/013</span></div>
+        <div class="row"><span>受理科室</span><span class="v">灵魂系统工作室 · 观察三科</span></div>
+        <div class="row"><span>事由</span><span class="v">志愿者退出审核（GB-114 附则）</span></div>
+      </div>
+
+      <div class="card-body">
+        <h1 class="title">身份验证 · 实验终止执行</h1>
+        <div class="subtitle">KATA TIM SOULS SYSTEM STUDIO — TERMINATION AUTHORIZATION</div>
+
+        <div class="record-panel">
+          <div class="record-row">
+            <span class="k">登记编号</span>
+            <span class="v"><span class="redact" id="rSerial">0▮3</span></span>
+          </div>
+          <div class="record-row">
+            <span class="k">登记姓名</span>
+            <span class="v"><span class="redact" id="rName">M████ E█████</span></span>
+          </div>
+          <div class="record-row">
+            <span class="k">实验项目</span>
+            <span class="v">共感锚定观察</span>
+          </div>
+          <div class="record-row">
+            <span class="k">关联对象</span>
+            <span class="v">099 · Sakurako Einhus（陪伴）</span>
+          </div>
+          <div class="record-row">
+            <span class="k">当前状态</span>
+            <span class="v tag">存活 · 观测窗口延长中</span>
+          </div>
+
+          <div class="wave-block">
+            <div class="wave-label"><span>013 信道波形</span><span id="waveALabel">SYNCED</span></div>
+            <svg class="wave wave-a" viewBox="0 0 300 36" preserveAspectRatio="none">
+              <path class="active" d="M0,18 C10,4 20,32 30,18 C40,4 50,32 60,18 C70,4 80,32 90,18 C100,4 110,32 120,18 C130,4 140,32 150,18 C160,4 170,32 180,18 C190,4 200,32 210,18 C220,4 230,32 240,18 C250,4 260,32 270,18 C280,4 290,32 300,18" stroke-dasharray="6 4"/>
+              <path class="flat" d="M0,18 L300,18"/>
+            </svg>
+            <div class="wave-label"><span>099 共感锚定波形</span><span id="waveBLabel">SYNCED</span></div>
+            <svg class="wave wave-b" viewBox="0 0 300 36" preserveAspectRatio="none">
+              <path class="active" d="M0,18 C10,6 20,30 30,18 C40,6 50,30 60,18 C70,6 80,30 90,18 C100,6 110,30 120,18 C130,6 140,30 150,18 C160,6 170,30 180,18 C190,6 200,30 210,18 C220,6 230,30 240,18 C250,6 260,30 270,18 C280,6 290,30 300,18" stroke-dasharray="6 4"/>
+            </svg>
+          </div>
+        </div>
+
+        <form id="verifyForm">
+          <div class="field">
+            <label for="inputSerial">受试者登记编号</label>
+            <input type="text" id="inputSerial" autocomplete="off" inputmode="numeric" placeholder="以三位数字登记编号核验">
+          </div>
+          <div class="field">
+            <label for="inputName">受试者登记姓名</label>
+            <input type="text" id="inputName" autocomplete="off" placeholder="以登记档案全名核验">
+            <div class="field-hint">档案信息已按标准程序局部遮蔽，请以工作室原始登记记录核验。</div>
+          </div>
+          <label class="confirm-row">
+            <input type="checkbox" id="confirmBox">
+            我确认已获得终止本实验之操作授权，并了解此操作一旦执行不可撤回。
+          </label>
+          <button type="submit" class="execute" id="execBtn">验证并执行终止</button>
+          <p id="verifyMsg" role="status"></p>
+          <div id="execLog"></div>
+        </form>
+      </div>
+    </section>
+
+    <!-- ============ 成功提示卡片 ============ -->
+    <section id="successCard" class="card hidden">
+      <div class="card-meta">
+        <div class="row"><span>执行结果</span><span class="v">已完成</span></div>
+        <div class="row"><span>时间戳</span><span class="v" id="tsOut">—</span></div>
+        <div class="row"><span>执行编号</span><span class="v">013 / TERMINATION</span></div>
+      </div>
+
+      <div class="card-body success-body">
+        <div class="success-stamp">实验已终止 · TERMINATED</div>
+        <h1 class="title">受试者 013 · Minki Einhus</h1>
+        <p>实验授权已正式终止。信道锚点回收完毕，观察舱资源已释放，个案数据转入封存流程。</p>
+
+        <div class="wave-block">
+          <div class="wave-label"><span>013 信道波形</span><span>FLATLINE</span></div>
+          <svg class="wave wave-a flatten" viewBox="0 0 300 36" preserveAspectRatio="none">
+            <path class="active" d="M0,18 C10,4 20,32 30,18 C40,4 50,32 60,18 C70,4 80,32 90,18 C100,4 110,32 120,18 C130,4 140,32 150,18 C160,4 170,32 180,18 C190,4 200,32 210,18 C220,4 230,32 240,18 C250,4 260,32 270,18 C280,4 290,32 300,18" stroke-dasharray="6 4"/>
+            <path class="flat" d="M0,18 L300,18"/>
+          </svg>
+          <div class="wave-label"><span>099 共感锚定波形</span><span style="color:var(--accent-red)">异常波动</span></div>
+          <svg class="wave wave-b warn" viewBox="0 0 300 36" preserveAspectRatio="none">
+            <path class="active" d="M0,18 C6,2 12,34 18,18 C24,2 30,34 36,18 C42,2 48,34 54,18 C60,2 66,34 72,18 C78,2 84,34 90,18 C96,2 102,34 108,18 C114,2 120,34 126,18 C132,2 138,34 144,18 C150,2 156,34 162,18 C168,2 174,34 180,18 C186,2 192,34 198,18 C204,2 210,34 216,18 C222,2 228,34 234,18 C240,2 246,34 252,18 C258,2 264,34 270,18 C276,2 282,34 288,18 C294,2 300,34 300,18" stroke-dasharray="4 3"/>
+          </svg>
+        </div>
+
+        <div class="warn-callout">
+          系统提示：共感锚定对象 099 · Sakurako Einhus 的信号在锚点回收瞬间出现异常波动，已自动记录，建议同步复核其观测数据。
+          <span class="who">— 自动生成，观察三科 存档</span>
+        </div>
+
+        <div class="note-line">
+          档案备注：从今往后，「013」不会再指向任何需要被观察的人。
+        </div>
+
+        <a class="back-btn" href="https://katatim.github.io/OBSERVER" id="backBtn">← 返回 OBSERVER</a>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<footer>
+  卡塔蒂姆内部终端 · 本页面为虚构叙事作品<br>
+  未经授权访问本终端将被记录并移交安保部门
+</footer>
+
+<script>
+  // ---------- 背景水印 ----------
+  (function(){
+    var wm = document.getElementById('wm');
+    var line = "内部限阅 · 禁止外流 · KATA TIM CONFIDENTIAL · ";
+    var block = "";
+    for(var i=0;i<40;i++){ block += line; }
+    var full = "";
+    for(var j=0;j<26;j++){ full += block + "\n"; }
+    wm.textContent = full;
+  })();
+
+  // ---------- 开机序列 ----------
+  var bootLines = [
+    "KATA TIM SOULS SYSTEM STUDIO — TERMINAL v3.2",
+    "灵魂阻断插件已加载 · 版本 ≥3.2 校验通过",
+    "正在连接内网服务器 …",
+    "正在检索受试者档案 013 …",
+    "检索完成，等待操作员身份验证 …"
+  ];
+  var bootScreen = document.getElementById('bootScreen');
+  var idx = 0;
+  function typeNextLine(){
+    if(idx >= bootLines.length){
+      setTimeout(function(){
+        document.getElementById('verifyCard').classList.remove('hidden');
+        document.getElementById('verifyCard').classList.add('fade-in');
+      }, 350);
+      return;
+    }
+    var div = document.createElement('div');
+    div.className = 'line';
+    div.textContent = bootLines[idx];
+    bootScreen.appendChild(div);
+    idx++;
+    setTimeout(typeNextLine, idx === bootLines.length ? 260 : 420);
+  }
+  typeNextLine();
+
+  // ---------- 验证逻辑 ----------
+  var execLines = [
+    "核验通过，正在建立执行会话 …",
+    "正在断开 013 信道锚点 …",
+    "正在回收观察舱资源 …",
+    "正在归档个案数据至封存区 …",
+    "执行完成。"
+  ];
+
+  document.getElementById('verifyForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    var serialRaw = document.getElementById('inputSerial').value;
+    var nameRaw = document.getElementById('inputName').value;
+    var confirmed = document.getElementById('confirmBox').checked;
+
+    var serial = serialRaw.replace(/[^0-9]/g,'');
+    var name = nameRaw.toLowerCase().replace(/[^a-z]/g,'');
+
+    var serialOK = (serial === '013' || serial === '13');
+    var nameOK = (name.indexOf('minki') !== -1 && name.indexOf('einhus') !== -1);
+
+    var msg = document.getElementById('verifyMsg');
+
+    if(serialOK && nameOK && confirmed){
+      document.getElementById('rSerial').classList.add('unlocked');
+      document.getElementById('rSerial').textContent = '013';
+      document.getElementById('rName').classList.add('unlocked');
+      document.getElementById('rName').textContent = 'Minki Einhus';
+
+      msg.style.color = 'var(--accent-success)';
+      msg.textContent = '身份核验通过。';
+
+      document.getElementById('execBtn').disabled = true;
+      runExecSequence();
+    } else {
+      var missing = [];
+      if(!serialOK) missing.push('登记编号');
+      if(!nameOK) missing.push('登记姓名');
+      if(!confirmed) missing.push('授权确认');
+      msg.style.color = 'var(--accent-red)';
+      msg.textContent = '核验未通过 — 缺少：' + missing.join('、') + '。';
+    }
+  });
+
+  function runExecSequence(){
+    var log = document.getElementById('execLog');
+    log.innerHTML = '';
+    var i = 0;
+    function next(){
+      if(i >= execLines.length){
+        setTimeout(showSuccess, 500);
+        return;
+      }
+      var div = document.createElement('div');
+      div.className = 'line';
+      div.textContent = execLines[i];
+      log.appendChild(div);
+      i++;
+      setTimeout(next, 480);
+    }
+    next();
+  }
+
+  function showSuccess(){
+    document.getElementById('verifyCard').classList.add('hidden');
+    var s = document.getElementById('successCard');
+    s.classList.remove('hidden');
+    s.classList.add('fade-in');
+    s.scrollIntoView({behavior:'smooth', block:'start'});
+
+    var now = new Date();
+    var pad = function(n){ return (n<10?'0':'')+n; };
+    var ts = now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate())+' '
+      +pad(now.getHours())+':'+pad(now.getMinutes())+':'+pad(now.getSeconds());
+    document.getElementById('tsOut').textContent = ts;
+
+    // Sakurako 信号短暂异常后回稳
+    setTimeout(function(){
+      var wb = document.querySelector('#successCard .wave-b');
+      if(wb) wb.classList.remove('warn');
+    }, 4200);
+  }
+</script>
+
+</body>
+</html>
