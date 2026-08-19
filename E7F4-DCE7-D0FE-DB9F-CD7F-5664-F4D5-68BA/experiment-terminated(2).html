@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>實驗已終止</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=IBM+Plex+Sans+TC:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0a0d0b;
+    --bg-panel: #10140f;
+    --line: #1d251d;
+    --text: #d6dad2;
+    --text-dim: #6d786c;
+    --amber: #ffb000;
+    --amber-dim: #7a5600;
+  }
+
+  *{ box-sizing: border-box; }
+
+  html, body{
+    margin:0;
+    padding:0;
+    min-height:100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans TC', 'IBM Plex Sans', sans-serif;
+  }
+
+  body{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding: 24px;
+    position:relative;
+    overflow:hidden;
+  }
+
+  /* 極淡掃描線紋理 */
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(255,255,255,0.018) 0px,
+      rgba(255,255,255,0.018) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    z-index: 5;
+  }
+
+  .panel{
+    position:relative;
+    width:100%;
+    max-width: 560px;
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 28px 28px 32px;
+  }
+
+  .panel::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    border-radius:6px;
+    box-shadow: 0 0 0 1px rgba(255,176,0,0.04), 0 40px 80px -30px rgba(0,0,0,0.7);
+    pointer-events:none;
+  }
+
+  /* 頂部狀態列 */
+  .statusbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    font-family:'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 22px;
+  }
+
+  .statusbar .left{ display:flex; align-items:center; gap:8px; }
+
+  .dot{
+    width:7px; height:7px;
+    border-radius:50%;
+    background: var(--amber);
+    box-shadow: 0 0 6px 1px rgba(255,176,0,0.5);
+    animation: blink 2.6s ease-in-out infinite;
+  }
+
+  @keyframes blink{
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.25; }
+  }
+
+  /* 示波器：由波形收斂為平線 */
+  .scope{
+    width:100%;
+    height: 64px;
+    margin-bottom: 22px;
+  }
+
+  .scope path{
+    fill:none;
+    stroke: var(--amber);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+  }
+
+  .scope .wave{
+    stroke-dasharray: 600;
+    stroke-dashoffset: 0;
+    animation: fadeWave 3.2s ease forwards;
+  }
+
+  .scope .flat{
+    opacity: 0;
+    animation: showFlat 3.2s ease forwards;
+  }
+
+  @keyframes fadeWave{
+    0%   { opacity: 1; }
+    70%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  @keyframes showFlat{
+    0%   { opacity: 0; }
+    70%  { opacity: 0; }
+    100% { opacity: 1; }
+  }
+
+  h1{
+    font-family:'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: clamp(26px, 5vw, 32px);
+    letter-spacing: 0.01em;
+    color: #f2f0e8;
+    margin: 0 0 6px;
+  }
+
+  .subtitle{
+    font-family:'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    color: var(--amber-dim);
+    text-transform: uppercase;
+    margin: 0 0 20px;
+  }
+
+  .desc{
+    font-size: 14.5px;
+    line-height: 1.75;
+    color: var(--text);
+    margin: 0 0 24px;
+  }
+
+  .desc + .desc{ margin-top: -16px; }
+
+  .readout{
+    background: rgba(255,255,255,0.015);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 4px 16px;
+    margin-bottom: 26px;
+  }
+
+  .row{
+    display:flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 11px 0;
+    font-family:'JetBrains Mono', monospace;
+    font-size: 12.5px;
+  }
+
+  .row + .row{ border-top: 1px solid var(--line); }
+
+  .row .k{ color: var(--text-dim); letter-spacing: 0.05em; }
+  .row .v{ color: var(--text); text-align: right; }
+  .row .v.warn{ color: var(--amber); }
+
+  @media (prefers-reduced-motion: reduce){
+    .dot{ animation: none; opacity: 1; }
+    .scope .wave{ animation: none; opacity: 0; }
+    .scope .flat{ animation: none; opacity: 1; }
+  }
+
+  @media (max-width: 420px){
+    .panel{ padding: 22px 18px 26px; }
+    .row{ font-size: 11.5px; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="panel" role="main">
+    <div class="statusbar">
+      <div class="left">
+        <span class="dot" aria-hidden="true"></span>
+        <span>SYS · EXPERIMENT-RUNTIME</span>
+      </div>
+      <span id="clock">--:--:--</span>
+    </div>
+
+    <svg class="scope" viewBox="0 0 560 64" preserveAspectRatio="none" aria-hidden="true">
+      <path class="wave" d="M0,32 C20,10 40,54 60,32 C80,10 100,54 120,32 C140,10 160,54 180,32
+        C200,10 220,54 240,32 C260,20 280,44 300,32 C320,26 340,38 360,32
+        C380,29 400,35 420,32 L560,32" />
+      <path class="flat" d="M0,32 L560,32" />
+    </svg>
+
+    <h1>實驗已終止</h1>
+    <p class="subtitle">Experiment Terminated · Page Unavailable</p>
+
+    <p class="desc">此頁面對應的實驗流程已被終止，相關運算資源已釋放，工作階段記錄已封存並唯讀保存。</p>
+    <p class="desc">您目前無法存取此頁面的即時內容。如需查閱結果，請透過下方連結取得封存記錄，或聯絡實驗負責人。</p>
+
+    <div class="readout">
+      <div class="row">
+        <span class="k">終止時間 TERMINATED_AT</span>
+        <span class="v" id="ts">2026-08-18 10:52 (UTC+8)</span>
+      </div>
+      <div class="row">
+        <span class="k">工作階段 SESSION_ID</span>
+        <span class="v">EXP-2026-0818-A417</span>
+      </div>
+      <div class="row">
+        <span class="k">狀態 STATUS</span>
+        <span class="v warn">TERMINATED · READ-ONLY</span>
+      </div>
+    </div>
+  </div>
+
+<script>
+  function pad(n){ return String(n).padStart(2, '0'); }
+  function updateClock(){
+    var d = new Date();
+    var s = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+    var clockEl = document.getElementById('clock');
+    if (clockEl) clockEl.textContent = s;
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+</script>
+
+</body>
+</html>
